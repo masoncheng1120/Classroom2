@@ -642,17 +642,29 @@
             <div class="space-y-3">
                 <div>
                     <label class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Email</label>
-                    <input id="authEmail" type="email" class="mt-1 w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500" placeholder="teacher@school.edu">
+                    <input id="authEmail" type="email" autocomplete="email" class="mt-1 w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500" placeholder="teacher@school.edu">
                 </div>
                 <div>
                     <label class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Password</label>
-                    <input id="authPassword" type="password" class="mt-1 w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500" placeholder="At least 6 characters">
+                    <input id="authPassword" type="password" autocomplete="current-password" class="mt-1 w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500" placeholder="At least 6 characters">
                 </div>
                 <p id="authError" class="hidden text-xs text-red-500 font-semibold"></p>
             </div>
             <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button id="btnSignIn" onclick="signInTeacher()" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-bold shadow-md shadow-indigo-200 transition-colors">Sign In</button>
                 <button id="btnRegister" onclick="registerTeacher()" class="bg-white border border-slate-200 hover:border-indigo-300 text-slate-700 rounded-xl py-2.5 text-sm font-bold transition-colors">Create Account</button>
+            </div>
+            <div class="mt-5 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">
+                <div class="h-px flex-1 bg-slate-200"></div>
+                <span>or</span>
+                <div class="h-px flex-1 bg-slate-200"></div>
+            </div>
+            <div class="mt-4">
+                <button id="btnGoogleSignIn" onclick="signInWithGoogle()" class="w-full bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl py-2.5 text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                    <i class="ph ph-google-logo text-lg"></i>
+                    <span>Continue With Google</span>
+                </button>
+                <p class="mt-2 text-center text-xs text-slate-400">Use the Google account already enabled in your Firebase project.</p>
             </div>
         </div>
     </div>
@@ -785,12 +797,13 @@
     <script>
         const FIREBASE_ENABLED = true;
         const FIREBASE_CONFIG = {
-            apiKey: "AIzaSyDLbiSi13mQx79tWjkgV-pLjTfuudvb5N8",
-            authDomain: "cwcc-b1615.firebaseapp.com",
-            projectId: "cwcc-b1615",
-            storageBucket: "cwcc-b1615.firebasestorage.app",
-            messagingSenderId: "452278742584",
-            appId: "1:452278742584:web:3eda6faf58458b755600cd"
+            apiKey: "AIzaSyDmLOqEz5_C3SvJAYVCk4uh8EukrAZ4hg4",
+            authDomain: "classroom-37354.firebaseapp.com",
+            projectId: "classroom-37354",
+            storageBucket: "classroom-37354.firebasestorage.app",
+            messagingSenderId: "293152753003",
+            appId: "1:293152753003:web:30b512d6b5ee5330ccb82e",
+            measurementId: "G-3NWJ1RXM9M"
         };
         const FIREBASE_COLLECTION = "classrooms";
 
@@ -848,7 +861,7 @@
         }
 
         function setAuthButtonsDisabled(disabled) {
-            ['btnSignIn', 'btnRegister'].forEach(id => {
+            ['btnSignIn', 'btnRegister', 'btnGoogleSignIn'].forEach(id => {
                 const btn = document.getElementById(id);
                 if (!btn) return;
                 btn.disabled = disabled;
@@ -924,6 +937,33 @@
             } catch (error) {
                 console.error('Registration failed', error);
                 setAuthError(error.message || 'Could not create account.');
+            } finally {
+                authBusy = false;
+                setAuthButtonsDisabled(false);
+            }
+        }
+
+        async function signInWithGoogle() {
+            if (!firebaseAuth || authBusy || !window.firebase?.auth) return;
+
+            authBusy = true;
+            setAuthButtonsDisabled(true);
+            setAuthError('');
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                await firebaseAuth.signInWithPopup(provider);
+                const pwInput = document.getElementById('authPassword');
+                if (pwInput) pwInput.value = '';
+            } catch (error) {
+                console.error('Google sign-in failed', error);
+                if (error?.code === 'auth/popup-closed-by-user') {
+                    setAuthError('Google sign-in was closed before completing.');
+                } else if (error?.code === 'auth/account-exists-with-different-credential') {
+                    setAuthError('An account already exists with this email using a different sign-in method.');
+                } else {
+                    setAuthError(error.message || 'Could not sign in with Google.');
+                }
             } finally {
                 authBusy = false;
                 setAuthButtonsDisabled(false);
